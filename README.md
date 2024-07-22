@@ -1,0 +1,1 @@
+# Allergy-friendly-hotel-finder

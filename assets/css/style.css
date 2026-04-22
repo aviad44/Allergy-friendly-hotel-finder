@@ -1,0 +1,630 @@
+/* ==========================================================================
+   Allergy-Friendly Hotel Finder — Main Stylesheet
+   ========================================================================== */
+
+/* --- Custom Properties --------------------------------------------------- */
+:root {
+  --color-primary:      #1a6b47;
+  --color-primary-dark: #124d34;
+  --color-primary-light:#2d9164;
+  --color-accent:       #f0a500;
+  --color-text:         #1c1c1e;
+  --color-text-muted:   #5a5a5f;
+  --color-bg:           #f8f9f6;
+  --color-surface:      #ffffff;
+  --color-border:       #e2e8e4;
+  --color-review-bg:    #f4f9f6;
+  --color-tag-bg:       #e6f4ee;
+  --color-tag-text:     #1a6b47;
+  --radius-sm:          6px;
+  --radius-md:          12px;
+  --radius-lg:          20px;
+  --shadow-sm:          0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md:          0 4px 16px rgba(0, 0, 0, 0.09);
+  --shadow-lg:          0 8px 32px rgba(0, 0, 0, 0.12);
+  --max-width:          1100px;
+  --font-body:          "Georgia", "Times New Roman", serif;
+  --font-ui:            system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* --- Reset / Base --------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}
+
+img { max-width: 100%; height: auto; display: block; }
+a   { color: var(--color-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* --- Layout --------------------------------------------------------------- */
+.container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+/* --- Site Header ---------------------------------------------------------- */
+.site-header {
+  background: var(--color-primary);
+  color: #fff;
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-md);
+}
+
+.site-header .container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.site-logo {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.site-logo:hover { text-decoration: none; opacity: 0.9; }
+
+.site-tagline {
+  font-size: 0.82rem;
+  opacity: 0.85;
+  margin-left: auto;
+}
+
+.home-header {
+  padding: 2.5rem 0;
+  position: relative;
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 60%, var(--color-primary-light) 100%);
+}
+
+.home-header .site-logo {
+  font-size: 1.8rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.home-header .site-tagline {
+  font-size: 1rem;
+  margin-left: 0;
+  opacity: 0.9;
+}
+
+/* --- Breadcrumb ----------------------------------------------------------- */
+.breadcrumb {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.6rem 0;
+  font-size: 0.82rem;
+}
+
+.breadcrumb ol {
+  display: flex;
+  gap: 0.4rem;
+  list-style: none;
+  align-items: center;
+}
+
+.breadcrumb ol li + li::before {
+  content: "›";
+  color: var(--color-text-muted);
+  margin-right: 0.4rem;
+}
+
+.breadcrumb a { color: var(--color-primary); }
+
+/* --- Homepage ------------------------------------------------------------- */
+.hero-section {
+  text-align: center;
+  padding: 3rem 0 2rem;
+}
+
+.hero-section h2 {
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  margin-bottom: 0.75rem;
+  color: var(--color-primary-dark);
+}
+
+.hero-section p {
+  max-width: 640px;
+  margin-inline: auto;
+  color: var(--color-text-muted);
+  font-size: 1.05rem;
+}
+
+.trust-signals {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  list-style: none;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.trust-signals li {
+  background: var(--color-tag-bg);
+  color: var(--color-tag-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+}
+
+.trust-signals li::before { content: "✓  "; }
+
+/* --- Articles Grid -------------------------------------------------------- */
+.articles-section {
+  padding: 1rem 0 4rem;
+}
+
+.articles-section h2 {
+  font-size: 1.4rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.articles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.75rem;
+}
+
+.no-articles {
+  color: var(--color-text-muted);
+  font-style: italic;
+  grid-column: 1 / -1;
+}
+
+/* --- Article Card --------------------------------------------------------- */
+.article-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--color-border);
+}
+
+.article-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.article-card a {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.article-card img,
+.card-img-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: linear-gradient(135deg, #d4edda, #a8d5b5);
+}
+
+.card-content {
+  padding: 1.25rem;
+}
+
+.card-date {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.article-card h2 {
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+  color: var(--color-primary-dark);
+}
+
+.article-card p {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-cta {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* --- Article Page --------------------------------------------------------- */
+.article-main {
+  padding: 2rem 0 4rem;
+}
+
+.article-content {
+  max-width: 780px;
+  margin-inline: auto;
+}
+
+/* Article Header */
+.article-header {
+  margin-bottom: 2rem;
+}
+
+.article-meta {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+}
+
+.article-date  { color: var(--color-text-muted); }
+
+.article-category,
+.article-location {
+  background: var(--color-tag-bg);
+  color: var(--color-tag-text);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.article-title {
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  line-height: 1.25;
+  color: var(--color-primary-dark);
+  margin-bottom: 1rem;
+}
+
+.article-intro {
+  font-size: 1.1rem;
+  line-height: 1.75;
+  color: var(--color-text-muted);
+  border-left: 3px solid var(--color-primary-light);
+  padding-left: 1rem;
+}
+
+/* Hero Image */
+.hero-image {
+  margin: 2rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.hero-image img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.hero-image figcaption {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  text-align: right;
+  padding: 0.4rem 0.75rem;
+  background: var(--color-bg);
+}
+
+/* Sections */
+.article-content section {
+  margin-bottom: 3rem;
+}
+
+.article-content h2 {
+  font-size: 1.5rem;
+  color: var(--color-primary-dark);
+  margin-bottom: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.article-content p {
+  font-size: 1rem;
+  line-height: 1.8;
+  margin-bottom: 1rem;
+}
+
+.section-intro {
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-bottom: 1.5rem !important;
+}
+
+/* --- Hotel Card ----------------------------------------------------------- */
+.hotel-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.hotel-card h3 {
+  font-size: 1.3rem;
+  color: var(--color-primary-dark);
+  margin-bottom: 0.5rem;
+}
+
+.hotel-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.hotel-stars {
+  color: var(--color-accent);
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+}
+
+.hotel-address {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.hotel-overview {
+  font-size: 0.97rem;
+  line-height: 1.7;
+  margin-bottom: 1.25rem;
+}
+
+/* Allergy Features */
+.allergy-features {
+  margin-bottom: 1.5rem;
+}
+
+.allergy-features h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.allergy-features ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+}
+
+.allergy-features li {
+  background: var(--color-tag-bg);
+  color: var(--color-tag-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+}
+
+.allergy-features li::before { content: "✓  "; }
+
+/* Guest Reviews */
+.guest-reviews {
+  margin-bottom: 1.5rem;
+}
+
+.guest-reviews h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.review-quote {
+  background: var(--color-review-bg);
+  border-left: 3px solid var(--color-primary-light);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.review-quote p {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-style: italic;
+  line-height: 1.7;
+  color: var(--color-text);
+  margin-bottom: 0.5rem !important;
+}
+
+.review-quote footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+
+.reviewer-name { font-weight: 600; color: var(--color-text); }
+
+.review-platform {
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.review-stars { color: var(--color-accent); }
+
+/* Hotel Action Buttons */
+.hotel-links {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  text-decoration: none !important;
+}
+
+.btn:hover { transform: translateY(-1px); }
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover { background: var(--color-primary-dark); }
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
+}
+
+.btn-secondary:hover {
+  background: var(--color-tag-bg);
+}
+
+/* --- Travel Tips ---------------------------------------------------------- */
+.tips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.tip-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.tip-card h3 {
+  font-size: 1rem;
+  color: var(--color-primary-dark);
+  margin-bottom: 0.5rem;
+}
+
+.tip-card p {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0 !important;
+}
+
+/* --- FAQ ------------------------------------------------------------------ */
+.faq-section h2 {
+  margin-bottom: 1.25rem;
+}
+
+.faq-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+  background: var(--color-surface);
+}
+
+.faq-question {
+  font-size: 1rem !important;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  padding: 1rem 1.25rem;
+  margin: 0 !important;
+  cursor: default;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-tag-bg);
+}
+
+.faq-answer {
+  padding: 1rem 1.25rem;
+}
+
+.faq-answer p {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  margin: 0 !important;
+}
+
+/* --- Conclusion ----------------------------------------------------------- */
+.conclusion-section p {
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+/* --- Footer --------------------------------------------------------------- */
+.site-footer {
+  background: var(--color-primary-dark);
+  color: rgba(255, 255, 255, 0.85);
+  padding: 2rem 0;
+  margin-top: 2rem;
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.site-footer p + p { margin-top: 0.4rem; }
+
+.site-footer a {
+  color: var(--color-accent);
+}
+
+.site-footer a:hover { color: #fff; }
+
+/* --- Responsive ----------------------------------------------------------- */
+@media (max-width: 640px) {
+  .site-tagline       { display: none; }
+  .hotel-links        { flex-direction: column; }
+  .btn                { justify-content: center; }
+  .tips-grid          { grid-template-columns: 1fr; }
+  .trust-signals      { flex-direction: column; align-items: center; }
+  .article-meta       { gap: 0.4rem; }
+}
+
+@media (max-width: 480px) {
+  .hero-image         { border-radius: 0; }
+  .hotel-card         { padding: 1.25rem; }
+}
+
+/* --- Print ---------------------------------------------------------------- */
+@media print {
+  .site-header, .breadcrumb, .site-footer { display: none; }
+  .btn { display: none; }
+  body { font-size: 12pt; }
+  .article-title { font-size: 18pt; }
+}

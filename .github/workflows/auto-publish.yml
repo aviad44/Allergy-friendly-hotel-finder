@@ -1,0 +1,80 @@
+name: Auto-Publish Allergy-Friendly Hotel Guide
+
+# Runs every 2 days at 08:00 UTC, and can be triggered manually.
+# Requires these repository secrets:
+#   ANTHROPIC_API_KEY     — Claude API (required)
+#   BRAVE_SEARCH_API_KEY  — Brave Search API (recommended, get free key at brave.com/search/api/)
+#   UNSPLASH_ACCESS_KEY   — Unsplash API (recommended, free at unsplash.com/developers)
+
+on:
+  schedule:
+    - cron: "0 8 */2 * *"   # every 2 days at 08:00 UTC
+  workflow_dispatch:          # allow manual trigger from GitHub Actions UI
+    inputs:
+      dry_run:
+        description: "Dry run — generate article but do NOT commit (true/false)"
+        required: false
+        default: "false"
+
+jobs:
+  generate-and-publish:
+    name: Generate & Publish Article
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to push the generated article back to the repo
+
+    steps:
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so git log works correctly
+
+      # -----------------------------------------------------------------------
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      # -----------------------------------------------------------------------
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      # -----------------------------------------------------------------------
+      - name: Generate article
+        id: generate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BRAVE_SEARCH_API_KEY: ${{ secrets.BRAVE_SEARCH_API_KEY }}
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+        run: python scripts/generate_article.py
+
+      # -----------------------------------------------------------------------
+      - name: Commit and push new article
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          # Only commit if there are actual changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit — article may already exist."
+          else
+            git commit -m "Auto-publish: ${{ steps.generate.outputs.title || 'new allergy-friendly hotel guide' }}"
+            git push -u origin main
+            echo "Article committed and pushed to main."
+          fi
+
+      # -----------------------------------------------------------------------
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "## Article Generation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Destination | ${{ steps.generate.outputs.destination }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Slug | ${{ steps.generate.outputs.slug }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dry run | ${{ github.event.inputs.dry_run || 'false' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY

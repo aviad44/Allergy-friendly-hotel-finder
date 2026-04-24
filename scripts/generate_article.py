@@ -636,6 +636,14 @@ def render_sitemap(articles: list[dict]) -> str:
 # Main
 # ---------------------------------------------------------------------------
 
+def set_github_output(name: str, value: str) -> None:
+    """Write a step output variable for GitHub Actions (new GITHUB_OUTPUT file API)."""
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output:
+        with open(github_output, "a", encoding="utf-8") as fh:
+            fh.write(f"{name}={value}\n")
+
+
 def main():
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
     brave_key = os.environ.get("BRAVE_SEARCH_API_KEY")
@@ -644,8 +652,6 @@ def main():
     if not anthropic_key:
         print("ERROR: ANTHROPIC_API_KEY is not set.")
         sys.exit(1)
-
-    client = anthropic.Anthropic(api_key=anthropic_key)
 
     destinations = load_destinations()
     articles_index = load_articles_index()
@@ -663,9 +669,10 @@ def main():
     else:
         print("[warn] BRAVE_SEARCH_API_KEY not set — using Claude training knowledge only")
 
-    # 2. Generate article
+    # 2. Generate article — use client as context manager to avoid httpx threading errors on exit
     print("Generating article content with Claude...")
-    article_data = generate_article_content(destination, search_results, client)
+    with anthropic.Anthropic(api_key=anthropic_key) as client:
+        article_data = generate_article_content(destination, search_results, client)
     slug = article_data["slug"]
     print(f"  Article slug: {slug}")
 
@@ -715,10 +722,10 @@ def main():
     (ROOT_DIR / "sitemap.xml").write_text(sitemap_xml, encoding="utf-8")
     print("  Updated sitemap.xml")
 
-    # Export for GitHub Actions step summary
-    print(f"\n::set-output name=destination::{city}, {country}")
-    print(f"::set-output name=slug::{slug}")
-    print(f"::set-output name=title::{article_data['title']}")
+    # Export step outputs for GitHub Actions (GITHUB_OUTPUT file API, replaces deprecated ::set-output)
+    set_github_output("destination", f"{city}, {country}")
+    set_github_output("slug", slug)
+    set_github_output("title", article_data["title"])
     print(f"\nDone! New article: articles/{slug}.html")
 
 

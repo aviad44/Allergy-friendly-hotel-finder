@@ -216,7 +216,7 @@ Write a comprehensive, SEO and GEO-optimized destination guide about the **best 
 Return ONLY a valid JSON object matching this schema (no markdown fences, no extra text):
 {ARTICLE_SCHEMA}"""
 
-    for attempt in range(3):
+    for attempt in range(4):
         try:
             response = client.messages.create(
                 model="claude-opus-4-7",
@@ -228,12 +228,26 @@ Return ONLY a valid JSON object matching this schema (no markdown fences, no ext
             raw = re.sub(r"^```(?:json)?\s*", "", raw)
             raw = re.sub(r"\s*```$", "", raw)
             return json.loads(raw)
+        except anthropic.APIConnectionError as exc:
+            print(f"  [warn] API connection error (attempt {attempt + 1}/4): {exc}")
+            if attempt == 3:
+                raise
+            wait = 2 ** (attempt + 1)
+            print(f"  Retrying in {wait}s...")
+            time.sleep(wait)
+        except anthropic.RateLimitError as exc:
+            print(f"  [warn] Rate limit hit (attempt {attempt + 1}/4): {exc}")
+            if attempt == 3:
+                raise
+            wait = 2 ** (attempt + 2)
+            print(f"  Retrying in {wait}s...")
+            time.sleep(wait)
         except json.JSONDecodeError as exc:
-            print(f"  [warn] JSON parse failed (attempt {attempt + 1}/3): {exc}")
-            if attempt == 2:
+            print(f"  [warn] JSON parse failed (attempt {attempt + 1}/4): {exc}")
+            if attempt == 3:
                 raise
             time.sleep(2)
-    raise RuntimeError("Could not generate valid article JSON after 3 attempts")
+    raise RuntimeError("Could not generate valid article JSON after 4 attempts")
 
 
 # ---------------------------------------------------------------------------

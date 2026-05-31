@@ -2,8 +2,17 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-interface NominatimResult { place_id: number; display_name: string; lat: string; lon: string; }
-interface Props { placeholder: string; onResult: (lngLat: [number, number], name: string) => void; }
+interface NominatimResult {
+  place_id: number;
+  display_name: string;
+  lat: string;
+  lon: string;
+}
+
+interface Props {
+  placeholder: string;
+  onResult: (lngLat: [number, number], name: string) => void;
+}
 
 export default function SearchBox({ placeholder, onResult }: Props) {
   const [query, setQuery] = useState('');
@@ -18,7 +27,8 @@ export default function SearchBox({ placeholder, onResult }: Props) {
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&accept-language=he`, { headers: { 'Accept-Language': 'he' } });
       const data: NominatimResult[] = await res.json();
-      setResults(data); setOpen(true);
+      setResults(data);
+      setOpen(true);
     } catch { setResults([]); } finally { setLoading(false); }
   }, []);
 
@@ -29,7 +39,9 @@ export default function SearchBox({ placeholder, onResult }: Props) {
   }, [query, search]);
 
   const select = (r: NominatimResult) => {
-    setQuery(r.display_name.split(',')[0]); setOpen(false); setResults([]);
+    setQuery(r.display_name.split(',')[0]);
+    setOpen(false);
+    setResults([]);
     onResult([parseFloat(r.lon), parseFloat(r.lat)], r.display_name);
   };
 

@@ -24,20 +24,30 @@ export async function POST(req: NextRequest) {
     const body: ShadeRequest = await req.json();
     const { routes, time, includeShadows = false } = body;
     if (!routes?.length) return NextResponse.json({ error: 'No routes provided' }, { status: 400 });
+
     const date = new Date(time);
     const midCoord = routes[0].coordinates[Math.floor(routes[0].coordinates.length / 2)];
     const sun = getSunPosition(midCoord[1], midCoord[0], date);
+
     if (sun.altitudeDeg <= 0) {
-      const scored: ScoredRoute[] = routes.map(r => ({ ...r, shadeScore: 1, segmentScores: r.coordinates.slice(0, -1).map(() => 1) }));
+      const scored: ScoredRoute[] = routes.map(r => ({
+        ...r,
+        shadeScore: 1,
+        segmentScores: r.coordinates.slice(0, -1).map(() => 1),
+      }));
       return NextResponse.json({ scored, sun, night: true });
     }
+
     const allCoords = routes.flatMap(r => r.coordinates);
     const buildings = await fetchBuildingsAlongRoute(allCoords);
     const shadows = buildShadowPolygons(buildings, sun);
+
     const scored: ScoredRoute[] = routes.map(route => {
       const { coordinates, distance, duration } = route;
       const segmentScores: number[] = [];
-      let totalWeightedShade = 0, totalLength = 0;
+      let totalWeightedShade = 0;
+      let totalLength = 0;
+
       for (let i = 0; i < coordinates.length - 1; i++) {
         const start = coordinates[i] as [number, number];
         const end = coordinates[i + 1] as [number, number];
@@ -49,8 +59,15 @@ export async function POST(req: NextRequest) {
         totalWeightedShade += score * len;
         totalLength += len;
       }
-      return { coordinates, distance, duration, shadeScore: totalLength > 0 ? totalWeightedShade / totalLength : 0, segmentScores, ...(includeShadows ? { shadowPolygons: shadows } : {}) };
+
+      return {
+        coordinates, distance, duration,
+        shadeScore: totalLength > 0 ? totalWeightedShade / totalLength : 0,
+        segmentScores,
+        ...(includeShadows ? { shadowPolygons: shadows } : {}),
+      };
     });
+
     return NextResponse.json({ scored, sun, night: false });
   } catch (err) {
     console.error('[shade]', err);

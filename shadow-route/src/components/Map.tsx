@@ -40,6 +40,7 @@ interface Props {
 export default function Map({ routes, activeRouteIdx, start, end, shadows, onMapClick }: Props) {
   const activeRoute = routes[activeRouteIdx];
   const inactiveRoutes = routes.filter((_, i) => i !== activeRouteIdx);
+
   return (
     <MapContainer center={[32.0853, 34.7818]} zoom={14} className="w-full h-full" zoomControl={false}>
       <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

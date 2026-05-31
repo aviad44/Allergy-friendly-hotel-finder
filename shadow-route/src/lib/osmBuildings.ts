@@ -18,12 +18,35 @@ export async function fetchBuildingsAlongRoute(
   const w = Math.min(...lngs) - bufferDeg;
   const e = Math.max(...lngs) + bufferDeg;
   const query = `[out:json][timeout:30];(way["building"](${s},${w},${n},${e}););out body;>;out skel qt;`;
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(query)}`,
-  });
-  if (!res.ok) throw new Error(`Overpass error: ${res.status}`);
+  const MIRRORS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
+  ];
+
+  let res: Response | null = null;
+  for (const url of MIRRORS) {
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json, */*',
+          'User-Agent': 'shadow-route-app/1.0',
+        },
+        body: `data=${encodeURIComponent(query)}`,
+      });
+      if (res.ok) break;
+      console.warn(`Overpass mirror ${url} returned ${res.status}, trying next`);
+    } catch (err) {
+      console.warn(`Overpass mirror ${url} failed:`, err);
+    }
+  }
+
+  if (!res?.ok) {
+    console.warn('All Overpass mirrors failed — proceeding without buildings');
+    return [];
+  }
   const data = await res.json();
   const nodes: Record<number, [number, number]> = {};
   for (const el of data.elements) {

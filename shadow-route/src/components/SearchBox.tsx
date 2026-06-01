@@ -25,7 +25,7 @@ export default function SearchBox({ placeholder, onResult }: Props) {
     if (q.trim().length < 2) { setResults([]); return; }
     setLoading(true);
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&accept-language=he`, { headers: { 'Accept-Language': 'he' } });
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6&countrycodes=il&accept-language=he`, { headers: { 'Accept-Language': 'he' } });
       const data: NominatimResult[] = await res.json();
       setResults(data);
       setOpen(true);

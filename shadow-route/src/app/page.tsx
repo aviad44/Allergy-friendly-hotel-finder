@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import RoutePanel from '@/components/RoutePanel';
 import TimeControl from '@/components/TimeControl';
@@ -27,25 +27,23 @@ export default function Home() {
   const [shadows, setShadows] = useState<Feature<Polygon>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const mapRef = useRef<HTMLDivElement>(null);
-
-  const scrollToMap = () => mapRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const handleMapClick = useCallback((lngLat: [number, number]) => {
     if (clickMode === 'start') {
       setStart(lngLat);
-      setStartName(`${lngLat[1].toFixed(5)}, ${lngLat[0].toFixed(5)}`);
+      setStartName(`${lngLat[1].toFixed(4)}, ${lngLat[0].toFixed(4)}`);
       setClickMode('end');
     } else {
       setEnd(lngLat);
-      setEndName(`${lngLat[1].toFixed(5)}, ${lngLat[0].toFixed(5)}`);
+      setEndName(`${lngLat[1].toFixed(4)}, ${lngLat[0].toFixed(4)}`);
     }
   }, [clickMode]);
 
   const findRoutes = useCallback(async () => {
     if (!start || !end) return;
     setLoading(true);
+    setSheetOpen(true);
     setError(null);
     setRoutes([]);
 
@@ -55,11 +53,7 @@ export default function Home() {
       const res = await fetch('/api/shade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          routes: rawRoutes,
-          time: time.toISOString(),
-          includeShadows: true,
-        }),
+        body: JSON.stringify({ routes: rawRoutes, time: time.toISOString(), includeShadows: true }),
       });
 
       if (!res.ok) throw new Error(await res.text());
@@ -69,17 +63,12 @@ export default function Home() {
       const shadiest = [...scored].sort((a, b) => b.shadeScore - a.shadeScore)[0];
       const sunniest = [...scored].sort((a, b) => a.shadeScore - b.shadeScore)[0];
       const fastest = [...scored].sort((a, b) => a.duration - b.duration)[0];
-      const ordered = [fastest, shadiest, sunniest].filter(
-        (r, i, arr) => arr.indexOf(r) === i
-      );
+      const ordered = [fastest, shadiest, sunniest].filter((r, i, arr) => arr.indexOf(r) === i);
 
       setRoutes(ordered);
       setShadows(data.scored[0]?.shadowPolygons ?? []);
-      const preferredRoute = preference === 'sun' ? sunniest : shadiest;
-      setActiveRouteIdx(Math.max(0, ordered.indexOf(preferredRoute)));
-
-      // scroll to map so user sees the route drawn
-      setTimeout(scrollToMap, 100);
+      const preferred = preference === 'sun' ? sunniest : shadiest;
+      setActiveRouteIdx(Math.max(0, ordered.indexOf(preferred)));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'שגיאה לא ידועה');
     } finally {
@@ -88,17 +77,13 @@ export default function Home() {
   }, [start, end, mode, time, preference]);
 
   const canSearch = start !== null && end !== null && !loading;
+  const showSheet = sheetOpen && (loading || routes.length > 0 || !!error);
 
   return (
-    /* On mobile: single column, map pinned at top. On desktop: two columns side-by-side */
-    <div className="flex flex-col md:flex-row bg-gray-50" style={{ height: '100dvh' }} dir="rtl">
+    <div className="relative overflow-hidden" style={{ height: '100dvh', width: '100vw' }} dir="rtl">
 
-      {/* ── MAP ── top on mobile (order-1), left column on desktop (order-2 in RTL) */}
-      <main
-        ref={mapRef}
-        className="order-1 md:order-2 relative shrink-0 md:shrink md:flex-1"
-        style={{ height: '52dvh' }}
-      >
+      {/* ── Full-screen map ── */}
+      <div className="absolute inset-0 z-0">
         <Map
           routes={routes}
           activeRouteIdx={activeRouteIdx}
@@ -107,118 +92,149 @@ export default function Home() {
           shadows={shadows}
           onMapClick={handleMapClick}
         />
+      </div>
 
-        {/* Legend */}
-        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-xl p-2.5 shadow text-xs z-[400]" dir="rtl">
-          <p className="font-semibold text-gray-700 mb-1">אגדה</p>
-          <div className="flex flex-col gap-0.5">
-            <span className="flex items-center gap-1.5"><span className="w-5 h-1.5 rounded bg-blue-500 inline-block" /> צל</span>
-            <span className="flex items-center gap-1.5"><span className="w-5 h-1.5 rounded bg-yellow-400 inline-block" /> חלקי</span>
-            <span className="flex items-center gap-1.5"><span className="w-5 h-1.5 rounded bg-orange-500 inline-block" /> שמש</span>
-          </div>
-        </div>
-      </main>
-
-      {/* ── SIDEBAR ── scrollable bottom panel on mobile (order-2), right column on desktop (order-1 in RTL) */}
-      <aside
-        className="order-2 md:order-1 md:w-80 md:flex-none flex flex-col bg-white shadow-xl z-10 overflow-y-auto min-h-0 flex-1"
-      >
-        {/* Header */}
-        <div className="p-3 border-b bg-gradient-to-l from-blue-600 to-blue-800 shrink-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-lg font-bold text-white">🌳 ניווט בצל</h1>
-              <p className="text-blue-100 text-xs">מסלולים מוצלים לרגל ואופניים</p>
+      {/* ── Floating search panel (top) ── */}
+      <div className="absolute top-0 left-0 right-0 z-[500] p-3 pointer-events-none">
+        <div
+          className="bg-white/96 backdrop-blur-md rounded-2xl shadow-2xl p-3 pointer-events-auto w-full max-w-md mx-auto"
+          style={{ backdropFilter: 'blur(12px)' }}
+        >
+          {/* Logo row */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🌳</span>
+              <div>
+                <p className="font-bold text-gray-800 text-base leading-tight">ניווט בצל</p>
+                <p className="text-gray-400 text-[11px] leading-tight">מסלולים מוצלים לרגל ואופניים</p>
+              </div>
             </div>
-            {/* Show-map button visible only on mobile */}
+            {/* Mode + preference chips */}
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setMode('foot-walking')}
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${mode === 'foot-walking' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200'}`}>
+                🚶
+              </button>
+              <button onClick={() => setMode('cycling-regular')}
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${mode === 'cycling-regular' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200'}`}>
+                🚲
+              </button>
+              <div className="w-px h-4 bg-gray-200" />
+              <button onClick={() => setPreference('shade')}
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${preference === 'shade' ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-white text-gray-500 border-gray-200'}`}>
+                🌳
+              </button>
+              <button onClick={() => setPreference('sun')}
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${preference === 'sun' ? 'bg-yellow-100 text-yellow-700 border-yellow-300' : 'bg-white text-gray-500 border-gray-200'}`}>
+                ☀️
+              </button>
+            </div>
+          </div>
+
+          {/* Search inputs */}
+          <div className="flex flex-col gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setClickMode('start')}
+                className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-sm border-2 transition-all ${clickMode === 'start' ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'}`}
+                title="לחץ על המפה להגדרת מוצא">
+                📍
+              </button>
+              <div className="flex-1">
+                <SearchBox
+                  placeholder="נקודת מוצא..."
+                  onResult={(ll, name) => { setStart(ll); setStartName(name); setClickMode('end'); }}
+                />
+              </div>
+            </div>
+
+            {/* Divider line */}
+            <div className="flex items-center gap-2 px-1">
+              <div className="mr-[30px] border-r-2 border-dashed border-gray-300 h-3" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button onClick={() => setClickMode('end')}
+                className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-sm border-2 transition-all ${clickMode === 'end' ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'}`}
+                title="לחץ על המפה להגדרת יעד">
+                🏁
+              </button>
+              <div className="flex-1">
+                <SearchBox
+                  placeholder="יעד..."
+                  onResult={(ll, name) => { setEnd(ll); setEndName(name); }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Confirmations */}
+          {(startName || endName) && (
+            <div className="flex gap-3 text-xs mb-2 px-1">
+              {startName && <span className="text-green-600 truncate flex-1">✓ {startName.split(',')[0]}</span>}
+              {endName && <span className="text-red-500 truncate flex-1">✓ {endName.split(',')[0]}</span>}
+            </div>
+          )}
+
+          {/* Time + Search button row */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <TimeControl date={time} onChange={setTime} />
+            </div>
             <button
-              onClick={scrollToMap}
-              className="md:hidden text-white bg-white/20 rounded-lg px-2 py-1 text-xs font-medium"
+              onClick={findRoutes}
+              disabled={!canSearch}
+              className="shrink-0 px-4 py-2 rounded-xl font-bold text-sm text-white bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-md"
             >
-              🗺️ מפה
+              {loading ? '⏳' : '🔍 חפש'}
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Search inputs */}
-        <div className="p-3 flex flex-col gap-2 border-b shrink-0">
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">נקודת מוצא</label>
-            <SearchBox
-              placeholder="חפש כתובת..."
-              onResult={(lngLat, name) => { setStart(lngLat); setStartName(name); }}
-            />
-            {startName && <p className="text-xs text-green-600 mt-1 truncate">✓ {startName}</p>}
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">יעד</label>
-            <SearchBox
-              placeholder="חפש יעד..."
-              onResult={(lngLat, name) => { setEnd(lngLat); setEndName(name); }}
-            />
-            {endName && <p className="text-xs text-red-500 mt-1 truncate">✓ {endName}</p>}
-          </div>
-          <div className="flex gap-2 text-xs">
-            <button
-              onClick={() => setClickMode('start')}
-              className={`flex-1 rounded-lg py-1.5 border font-medium ${clickMode === 'start' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-500'}`}
-            >
-              📍 לחץ למוצא
-            </button>
-            <button
-              onClick={() => setClickMode('end')}
-              className={`flex-1 rounded-lg py-1.5 border font-medium ${clickMode === 'end' ? 'border-red-400 bg-red-50 text-red-600' : 'border-gray-200 text-gray-500'}`}
-            >
-              🏁 לחץ ליעד
-            </button>
-          </div>
+      {/* ── Map legend (bottom-left, above bottom sheet) ── */}
+      <div
+        className="absolute left-3 z-[400] bg-white/90 backdrop-blur-sm rounded-xl p-2.5 shadow text-xs transition-all duration-300"
+        style={{ bottom: showSheet ? 'calc(42dvh + 12px)' : '12px' }}
+        dir="rtl"
+      >
+        <p className="font-semibold text-gray-600 mb-1 text-[11px]">צבעי מסלול</p>
+        <div className="flex flex-col gap-0.5">
+          <span className="flex items-center gap-1.5"><span className="w-5 h-2 rounded bg-blue-500 inline-block" /> צל</span>
+          <span className="flex items-center gap-1.5"><span className="w-5 h-2 rounded bg-yellow-400 inline-block" /> חלקי</span>
+          <span className="flex items-center gap-1.5"><span className="w-5 h-2 rounded bg-orange-500 inline-block" /> שמש</span>
         </div>
+      </div>
 
-        {/* Mode, preference & time */}
-        <div className="p-3 border-b flex flex-col gap-2 shrink-0">
-          <div className="flex gap-2">
-            <button onClick={() => setMode('foot-walking')}
-              className={`flex-1 py-1.5 rounded-lg border text-sm font-medium ${mode === 'foot-walking' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
-              🚶 רגל
-            </button>
-            <button onClick={() => setMode('cycling-regular')}
-              className={`flex-1 py-1.5 rounded-lg border text-sm font-medium ${mode === 'cycling-regular' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
-              🚲 אופניים
-            </button>
+      {/* ── Bottom sheet (results) ── */}
+      <div
+        className="absolute left-0 right-0 bottom-0 z-[500] transition-transform duration-300 ease-out"
+        style={{ transform: showSheet ? 'translateY(0)' : 'translateY(100%)' }}
+      >
+        <div
+          className="bg-white rounded-t-3xl shadow-2xl overflow-y-auto w-full max-w-md mx-auto"
+          style={{ maxHeight: '42dvh' }}
+        >
+          {/* Drag handle + close */}
+          <div className="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
+            <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto" />
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => setPreference('shade')}
-              className={`flex-1 py-1.5 rounded-lg border text-sm font-medium ${preference === 'shade' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
-              🌳 העדף צל
-            </button>
-            <button onClick={() => setPreference('sun')}
-              className={`flex-1 py-1.5 rounded-lg border text-sm font-medium ${preference === 'sun' ? 'border-yellow-500 bg-yellow-50 text-yellow-700' : 'border-gray-200 text-gray-600'}`}>
-              ☀️ העדף שמש
-            </button>
-          </div>
-          <TimeControl date={time} onChange={setTime} />
-        </div>
-
-        {/* Search button */}
-        <div className="p-3 border-b shrink-0">
           <button
-            onClick={findRoutes}
-            disabled={!canSearch}
-            className="w-full py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            onClick={() => setSheetOpen(false)}
+            className="absolute top-3 left-4 text-gray-400 hover:text-gray-600 text-lg leading-none"
           >
-            {loading ? '⏳ מחפש מסלולים...' : '🔍 מצא מסלולים מוצלים'}
+            ✕
           </button>
-          {error && <p className="text-red-500 text-xs mt-2 text-center">{error}</p>}
-        </div>
 
-        {/* Routes */}
-        <RoutePanel
-          routes={routes}
-          activeIdx={activeRouteIdx}
-          onSelect={(idx) => { setActiveRouteIdx(idx); scrollToMap(); }}
-          loading={loading}
-        />
-      </aside>
+          {error && <p className="text-red-500 text-sm text-center px-4 pb-3">{error}</p>}
+
+          <RoutePanel
+            routes={routes}
+            activeIdx={activeRouteIdx}
+            onSelect={setActiveRouteIdx}
+            loading={loading}
+          />
+        </div>
+      </div>
     </div>
   );
 }

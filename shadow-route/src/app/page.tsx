@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import RoutePanel from '@/components/RoutePanel';
 import TimeControl from '@/components/TimeControl';
@@ -27,6 +27,10 @@ export default function Home() {
   const [shadows, setShadows] = useState<Feature<Polygon>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const mapRef = useRef<HTMLDivElement>(null);
+
+  const scrollToMap = () => mapRef.current?.scrollIntoView({ behavior: 'smooth' });
 
   const handleMapClick = useCallback((lngLat: [number, number]) => {
     if (clickMode === 'start') {
@@ -62,7 +66,6 @@ export default function Home() {
       const data = await res.json();
 
       const scored: ScoredRoute[] = data.scored;
-
       const shadiest = [...scored].sort((a, b) => b.shadeScore - a.shadeScore)[0];
       const sunniest = [...scored].sort((a, b) => a.shadeScore - b.shadeScore)[0];
       const fastest = [...scored].sort((a, b) => a.duration - b.duration)[0];
@@ -74,6 +77,9 @@ export default function Home() {
       setShadows(data.scored[0]?.shadowPolygons ?? []);
       const preferredRoute = preference === 'sun' ? sunniest : shadiest;
       setActiveRouteIdx(Math.max(0, ordered.indexOf(preferredRoute)));
+
+      // scroll to map so user sees the route drawn
+      setTimeout(scrollToMap, 100);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'שגיאה לא ידועה');
     } finally {
@@ -84,10 +90,15 @@ export default function Home() {
   const canSearch = start !== null && end !== null && !loading;
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-gray-50" dir="rtl">
+    /* On mobile: single column, map pinned at top. On desktop: two columns side-by-side */
+    <div className="flex flex-col md:flex-row bg-gray-50" style={{ height: '100dvh' }} dir="rtl">
 
-      {/* Map — top on mobile, fills remaining space on desktop */}
-      <main className="order-1 md:order-2 h-[52vh] md:h-auto md:flex-1 relative shrink-0">
+      {/* ── MAP ── top on mobile (order-1), left column on desktop (order-2 in RTL) */}
+      <main
+        ref={mapRef}
+        className="order-1 md:order-2 relative shrink-0 md:shrink md:flex-1"
+        style={{ height: '52dvh' }}
+      >
         <Map
           routes={routes}
           activeRouteIdx={activeRouteIdx}
@@ -98,27 +109,35 @@ export default function Home() {
         />
 
         {/* Legend */}
-        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-xl p-2.5 shadow text-xs" dir="rtl">
+        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-xl p-2.5 shadow text-xs z-[400]" dir="rtl">
           <p className="font-semibold text-gray-700 mb-1">אגדה</p>
           <div className="flex flex-col gap-0.5">
-            <span className="flex items-center gap-1.5"><span className="w-6 h-1.5 rounded bg-blue-500 inline-block"/> צל (&gt;70%)</span>
-            <span className="flex items-center gap-1.5"><span className="w-6 h-1.5 rounded bg-yellow-400 inline-block"/> חלקי</span>
-            <span className="flex items-center gap-1.5"><span className="w-6 h-1.5 rounded bg-orange-500 inline-block"/> שמש (&lt;35%)</span>
+            <span className="flex items-center gap-1.5"><span className="w-5 h-1.5 rounded bg-blue-500 inline-block" /> צל</span>
+            <span className="flex items-center gap-1.5"><span className="w-5 h-1.5 rounded bg-yellow-400 inline-block" /> חלקי</span>
+            <span className="flex items-center gap-1.5"><span className="w-5 h-1.5 rounded bg-orange-500 inline-block" /> שמש</span>
           </div>
         </div>
       </main>
 
-      {/* Sidebar — scrollable bottom panel on mobile, fixed sidebar on desktop */}
-      <aside className="order-2 md:order-1 md:w-80 flex flex-col shadow-xl bg-white z-10 overflow-y-auto flex-1 md:flex-none">
-        {/* Drag handle visible only on mobile */}
-        <div className="md:hidden flex justify-center py-2 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-gray-300" />
-        </div>
-
+      {/* ── SIDEBAR ── scrollable bottom panel on mobile (order-2), right column on desktop (order-1 in RTL) */}
+      <aside
+        className="order-2 md:order-1 md:w-80 md:flex-none flex flex-col bg-white shadow-xl z-10 overflow-y-auto min-h-0 flex-1"
+      >
         {/* Header */}
-        <div className="p-3 md:p-4 border-b bg-gradient-to-l from-blue-600 to-blue-800 shrink-0">
-          <h1 className="text-lg md:text-xl font-bold text-white">🌳 ניווט בצל</h1>
-          <p className="text-blue-100 text-xs mt-0.5">מסלולים מוצלים לרגל ואופניים</p>
+        <div className="p-3 border-b bg-gradient-to-l from-blue-600 to-blue-800 shrink-0">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-bold text-white">🌳 ניווט בצל</h1>
+              <p className="text-blue-100 text-xs">מסלולים מוצלים לרגל ואופניים</p>
+            </div>
+            {/* Show-map button visible only on mobile */}
+            <button
+              onClick={scrollToMap}
+              className="md:hidden text-white bg-white/20 rounded-lg px-2 py-1 text-xs font-medium"
+            >
+              🗺️ מפה
+            </button>
+          </div>
         </div>
 
         {/* Search inputs */}
@@ -131,7 +150,6 @@ export default function Home() {
             />
             {startName && <p className="text-xs text-green-600 mt-1 truncate">✓ {startName}</p>}
           </div>
-
           <div>
             <label className="text-xs text-gray-500 mb-1 block">יעד</label>
             <SearchBox
@@ -140,8 +158,6 @@ export default function Home() {
             />
             {endName && <p className="text-xs text-red-500 mt-1 truncate">✓ {endName}</p>}
           </div>
-
-          {/* Click mode toggle */}
           <div className="flex gap-2 text-xs">
             <button
               onClick={() => setClickMode('start')}
@@ -161,30 +177,22 @@ export default function Home() {
         {/* Mode, preference & time */}
         <div className="p-3 border-b flex flex-col gap-2 shrink-0">
           <div className="flex gap-2">
-            <button
-              onClick={() => setMode('foot-walking')}
-              className={`flex-1 py-1.5 rounded-lg border text-sm font-medium ${mode === 'foot-walking' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}
-            >
+            <button onClick={() => setMode('foot-walking')}
+              className={`flex-1 py-1.5 rounded-lg border text-sm font-medium ${mode === 'foot-walking' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
               🚶 רגל
             </button>
-            <button
-              onClick={() => setMode('cycling-regular')}
-              className={`flex-1 py-1.5 rounded-lg border text-sm font-medium ${mode === 'cycling-regular' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}
-            >
+            <button onClick={() => setMode('cycling-regular')}
+              className={`flex-1 py-1.5 rounded-lg border text-sm font-medium ${mode === 'cycling-regular' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
               🚲 אופניים
             </button>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => setPreference('shade')}
-              className={`flex-1 py-1.5 rounded-lg border text-sm font-medium ${preference === 'shade' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}
-            >
+            <button onClick={() => setPreference('shade')}
+              className={`flex-1 py-1.5 rounded-lg border text-sm font-medium ${preference === 'shade' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
               🌳 העדף צל
             </button>
-            <button
-              onClick={() => setPreference('sun')}
-              className={`flex-1 py-1.5 rounded-lg border text-sm font-medium ${preference === 'sun' ? 'border-yellow-500 bg-yellow-50 text-yellow-700' : 'border-gray-200 text-gray-600'}`}
-            >
+            <button onClick={() => setPreference('sun')}
+              className={`flex-1 py-1.5 rounded-lg border text-sm font-medium ${preference === 'sun' ? 'border-yellow-500 bg-yellow-50 text-yellow-700' : 'border-gray-200 text-gray-600'}`}>
               ☀️ העדף שמש
             </button>
           </div>
@@ -203,11 +211,11 @@ export default function Home() {
           {error && <p className="text-red-500 text-xs mt-2 text-center">{error}</p>}
         </div>
 
-        {/* Routes list */}
+        {/* Routes */}
         <RoutePanel
           routes={routes}
           activeIdx={activeRouteIdx}
-          onSelect={setActiveRouteIdx}
+          onSelect={(idx) => { setActiveRouteIdx(idx); scrollToMap(); }}
           loading={loading}
         />
       </aside>

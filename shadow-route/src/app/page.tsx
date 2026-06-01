@@ -8,7 +8,6 @@ import type { ScoredRoute } from './api/shade/route';
 import { fetchAlternativeRoutes, type TravelMode } from '@/lib/routing';
 import type { Feature, Polygon } from 'geojson';
 
-// Mapbox cannot run during SSR
 const Map = dynamic(() => import('@/components/Map'), { ssr: false });
 const SearchBox = dynamic(() => import('@/components/SearchBox'), { ssr: false });
 
@@ -67,7 +66,6 @@ export default function Home() {
       const shadiest = [...scored].sort((a, b) => b.shadeScore - a.shadeScore)[0];
       const sunniest = [...scored].sort((a, b) => a.shadeScore - b.shadeScore)[0];
       const fastest = [...scored].sort((a, b) => a.duration - b.duration)[0];
-      // deduplicate while preserving order: fastest, shadiest, sunniest
       const ordered = [fastest, shadiest, sunniest].filter(
         (r, i, arr) => arr.indexOf(r) === i
       );
@@ -81,22 +79,50 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [start, end, mode, time]);
+  }, [start, end, mode, time, preference]);
 
   const canSearch = start !== null && end !== null && !loading;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-gray-50" dir="rtl">
-      {/* Sidebar */}
-      <aside className="w-80 flex flex-col shadow-xl bg-white z-10 overflow-y-auto">
+    <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-gray-50" dir="rtl">
+
+      {/* Map — top on mobile, fills remaining space on desktop */}
+      <main className="order-1 md:order-2 h-[52vh] md:h-auto md:flex-1 relative shrink-0">
+        <Map
+          routes={routes}
+          activeRouteIdx={activeRouteIdx}
+          start={start}
+          end={end}
+          shadows={shadows}
+          onMapClick={handleMapClick}
+        />
+
+        {/* Legend */}
+        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-xl p-2.5 shadow text-xs" dir="rtl">
+          <p className="font-semibold text-gray-700 mb-1">אגדה</p>
+          <div className="flex flex-col gap-0.5">
+            <span className="flex items-center gap-1.5"><span className="w-6 h-1.5 rounded bg-blue-500 inline-block"/> צל (&gt;70%)</span>
+            <span className="flex items-center gap-1.5"><span className="w-6 h-1.5 rounded bg-yellow-400 inline-block"/> חלקי</span>
+            <span className="flex items-center gap-1.5"><span className="w-6 h-1.5 rounded bg-orange-500 inline-block"/> שמש (&lt;35%)</span>
+          </div>
+        </div>
+      </main>
+
+      {/* Sidebar — scrollable bottom panel on mobile, fixed sidebar on desktop */}
+      <aside className="order-2 md:order-1 md:w-80 flex flex-col shadow-xl bg-white z-10 overflow-y-auto flex-1 md:flex-none">
+        {/* Drag handle visible only on mobile */}
+        <div className="md:hidden flex justify-center py-2 shrink-0">
+          <div className="w-10 h-1 rounded-full bg-gray-300" />
+        </div>
+
         {/* Header */}
-        <div className="p-4 border-b bg-gradient-to-l from-blue-600 to-blue-800">
-          <h1 className="text-xl font-bold text-white">🌳 ניווט בצל</h1>
+        <div className="p-3 md:p-4 border-b bg-gradient-to-l from-blue-600 to-blue-800 shrink-0">
+          <h1 className="text-lg md:text-xl font-bold text-white">🌳 ניווט בצל</h1>
           <p className="text-blue-100 text-xs mt-0.5">מסלולים מוצלים לרגל ואופניים</p>
         </div>
 
         {/* Search inputs */}
-        <div className="p-3 flex flex-col gap-2 border-b">
+        <div className="p-3 flex flex-col gap-2 border-b shrink-0">
           <div>
             <label className="text-xs text-gray-500 mb-1 block">נקודת מוצא</label>
             <SearchBox
@@ -132,8 +158,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Mode & time */}
-        <div className="p-3 border-b flex flex-col gap-2">
+        {/* Mode, preference & time */}
+        <div className="p-3 border-b flex flex-col gap-2 shrink-0">
           <div className="flex gap-2">
             <button
               onClick={() => setMode('foot-walking')}
@@ -166,7 +192,7 @@ export default function Home() {
         </div>
 
         {/* Search button */}
-        <div className="p-3 border-b">
+        <div className="p-3 border-b shrink-0">
           <button
             onClick={findRoutes}
             disabled={!canSearch}
@@ -185,29 +211,6 @@ export default function Home() {
           loading={loading}
         />
       </aside>
-
-      {/* Map */}
-      <main className="flex-1 relative">
-        <Map
-          routes={routes}
-          activeRouteIdx={activeRouteIdx}
-          start={start}
-          end={end}
-          shadows={shadows}
-          onMapClick={handleMapClick}
-        />
-
-        {/* Legend overlay */}
-        <div className="absolute bottom-6 left-4 bg-white/90 backdrop-blur-sm rounded-xl p-3 shadow text-xs" dir="rtl">
-          <p className="font-semibold text-gray-700 mb-1.5">אגדה</p>
-          <div className="flex flex-col gap-1">
-            <span className="flex items-center gap-2"><span className="w-8 h-2 rounded bg-blue-500 inline-block"/> צל ({'>'}70%)</span>
-            <span className="flex items-center gap-2"><span className="w-8 h-2 rounded bg-yellow-400 inline-block"/> חלקי (35-70%)</span>
-            <span className="flex items-center gap-2"><span className="w-8 h-2 rounded bg-orange-500 inline-block"/> שמש ({'<'}35%)</span>
-          </div>
-          <p className="text-gray-400 mt-2 text-[10px]">הצללה מבוססת על גובה בניינים + מיקום שמש</p>
-        </div>
-      </main>
     </div>
   );
 }

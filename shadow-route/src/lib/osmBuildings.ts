@@ -47,20 +47,30 @@ export async function fetchBuildingsAlongRoute(
     console.warn('All Overpass mirrors failed — proceeding without buildings');
     return [];
   }
-  const data = await res.json();
+
+  let data: { elements?: Record<string, unknown>[] };
+  try {
+    data = await res.json() as typeof data;
+  } catch {
+    console.warn('Overpass returned non-JSON response — proceeding without buildings');
+    return [];
+  }
+  if (!Array.isArray(data?.elements)) return [];
+
   const nodes: Record<number, [number, number]> = {};
   for (const el of data.elements) {
-    if (el.type === 'node') nodes[el.id] = [el.lon, el.lat];
+    if (el['type'] === 'node') nodes[el['id'] as number] = [el['lon'] as number, el['lat'] as number];
   }
   const buildings: OSMBuilding[] = [];
   for (const el of data.elements) {
-    if (el.type !== 'way' || !el.tags?.building) continue;
-    const footprint = (el.nodes as number[]).map(id => nodes[id]).filter(Boolean) as [number, number][];
+    if (el['type'] !== 'way' || !(el['tags'] as Record<string,string>)?.['building']) continue;
+    const tags = el['tags'] as Record<string, string>;
+    const footprint = (el['nodes'] as number[]).map(id => nodes[id]).filter(Boolean) as [number, number][];
     if (footprint.length < 3) continue;
-    const levels = parseInt(el.tags['building:levels'] ?? '3', 10);
-    const rawHeight = parseFloat(el.tags['height'] ?? '');
+    const levels = parseInt(tags['building:levels'] ?? '3', 10);
+    const rawHeight = parseFloat(tags['height'] ?? '');
     const height = isNaN(rawHeight) ? (isNaN(levels) ? 3 : levels) * DEFAULT_LEVEL_HEIGHT : rawHeight;
-    buildings.push({ id: el.id, footprint, height });
+    buildings.push({ id: el['id'] as number, footprint, height });
   }
   return buildings;
 }

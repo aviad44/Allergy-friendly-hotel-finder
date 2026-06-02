@@ -22,12 +22,12 @@ function convexHull(pts: [number, number][]): [number, number][] {
     (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0]);
   const lower: [number,number][] = [];
   for (const p of sorted) {
-    while (lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+    while (lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) < 0) lower.pop();
     lower.push(p);
   }
   const upper: [number,number][] = [];
   for (const p of [...sorted].reverse()) {
-    while (upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop();
+    while (upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], p) < 0) upper.pop();
     upper.push(p);
   }
   lower.pop(); upper.pop();

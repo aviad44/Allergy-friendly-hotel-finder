@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         const end = coordinates[i + 1] as [number, number];
         const score = scoreSegmentShade(start, end, shadows);
         segmentScores.push(score);
-        const dx = (end[0] - start[0]) * 111000 * Math.cos(start[1] * Math.PI / 180);
+        const dx = (end[0] - start[0]) * 111000 * Math.cos((start[1] + end[1]) / 2 * Math.PI / 180);
         const dy = (end[1] - start[1]) * 111000;
         const len = Math.sqrt(dx * dx + dy * dy);
         totalWeightedShade += score * len;

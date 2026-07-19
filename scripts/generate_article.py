@@ -219,7 +219,7 @@ Return ONLY a valid JSON object matching this schema (no markdown fences, no ext
     for attempt in range(4):
         try:
             response = client.messages.create(
-                model="claude-opus-4-7",
+                model="claude-opus-4-8",
                 max_tokens=8000,
                 messages=[{"role": "user", "content": prompt}],
             )

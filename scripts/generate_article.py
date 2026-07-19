@@ -645,9 +645,9 @@ def set_github_output(name: str, value: str) -> None:
 
 
 def main():
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
-    brave_key = os.environ.get("BRAVE_SEARCH_API_KEY")
-    unsplash_key = os.environ.get("UNSPLASH_ACCESS_KEY")
+    anthropic_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    brave_key = (os.environ.get("BRAVE_SEARCH_API_KEY") or "").strip()
+    unsplash_key = (os.environ.get("UNSPLASH_ACCESS_KEY") or "").strip()
 
     if not anthropic_key:
         print("ERROR: ANTHROPIC_API_KEY is not set.")
